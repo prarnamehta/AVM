@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.svm import SVR
 from xgboost import XGBRegressor
 from sklearn.metrics import r2_score, mean_absolute_percentage_error, mean_squared_error
 
