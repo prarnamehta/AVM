@@ -16,7 +16,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.svm import SVR
 from xgboost import XGBRegressor
 from sklearn.metrics import r2_score, mean_absolute_percentage_error, mean_squared_error
-import time
 
 st.set_page_config(page_title="Automated Valuation Model", layout="wide")
 st.title("🏠 Automated Valuation Model (AVM)")
@@ -102,18 +101,13 @@ if uploaded_file:
     }
 
     performance = []
-    best_model = None
-    best_score = -np.inf
-    best_scaler = None
-
+    model_objects = {}
     for scale_name, scaler in scalers.items():
         X_scaled = scaler.fit_transform(X)
         X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
         for model_name, model in models.items():
-            start_time = time.time()
             model.fit(X_train, y_train)
             y_pred = model.predict(X_test)
-            runtime = time.time() - start_time
             r2 = r2_score(y_test, y_pred)
             mape = mean_absolute_percentage_error(y_test, y_pred)
             nrmse = np.sqrt(mean_squared_error(y_test, y_pred)) / (y.max() - y.min())
@@ -121,45 +115,46 @@ if uploaded_file:
                 "Model": f"{model_name} ({scale_name})",
                 "R²": round(r2, 3),
                 "MAPE": round(mape, 3),
-                "nRMSE": round(nrmse, 3),
-                "Runtime (s)": round(runtime, 2)
+                "nRMSE": round(nrmse, 3)
             })
-            if r2 > best_score:
-                best_score = r2
-                best_model = model
-                best_scaler = scaler
+            model_objects[f"{model_name} ({scale_name})"] = (model, scaler)
 
     performance_df = pd.DataFrame(performance)
     st.subheader("📊 Model Performance Comparison")
     st.dataframe(performance_df)
 
+    # Select best model based on R² and nRMSE
+    best_model_row = performance_df.sort_values(by=["R²", "nRMSE"], ascending=[False, True]).iloc[0]
+    best_model_name = best_model_row["Model"]
+    best_model, best_scaler = model_objects[best_model_name]
+
     # Prediction UI
     st.subheader("🏡 Predict Property Valuation")
     col1, col2 = st.columns(2)
-    with col1:
-        year_built = st.number_input("Year Built", min_value=1800, max_value=2025, value=2000)
-        total_living_area = st.number_input("Total Living Area (sq ft)", min_value=100, max_value=10000, value=1500)
-        rooms = st.number_input("Number of Rooms", min_value=1, max_value=20, value=5)
-    with col2:
-        bathrooms = st.number_input("Number of Bathrooms", min_value=1, max_value=10, value=2)
-        neighbourhoods = ds['Neighbourhood Area'].dropna().unique().tolist()
-        selected_neighbourhood = st.selectbox("Neighbourhood Area", sorted(neighbourhoods))
+    year_built = col1.number_input("Year Built", min_value=1800, max_value=2025, value=2000)
+    total_living_area = col2.number_input("Total Living Area (sq ft)", min_value=100, max_value=10000, value=1500)
+    rooms = col1.number_input("Number of Rooms", min_value=1, max_value=20, value=5)
+    bathrooms = col2.number_input("Number of Bathrooms", min_value=1, max_value=10, value=2)
+    neighbourhoods = ds["Neighbourhood Area"].dropna().unique().tolist()
+    selected_neighbourhood = st.selectbox("Neighbourhood Area", sorted(neighbourhoods))
+    neighbourhood_freq = ds["Neighbourhood Area"].value_counts().get(selected_neighbourhood, 0)
 
     # Prepare input for prediction
-    input_data = {
-        "Neighbourhood Area_freq": ds['Neighbourhood Area'].value_counts().get(selected_neighbourhood, 0),
-        "Total Living Area": total_living_area,
+    input_dict = {
         "Year Built": year_built,
-        "Rooms": rooms
+        "Total Living Area": total_living_area,
+        "Rooms": rooms,
+        "Bathrooms": bathrooms,
+        "Neighbourhood Area_freq": neighbourhood_freq
     }
 
-    # Add missing columns with zero
-    for col in X.columns:
-        if col not in input_data:
-            input_data[col] = 0
+    # Fill missing features with median or zero
+    for feature in X.columns:
+        if feature not in input_dict:
+            input_dict[feature] = X[feature].median() if feature in X.columns else 0
 
-    input_df = pd.DataFrame([input_data])
-    input_scaled = best_scaler.transform(input_df)
+    input_df = pd.DataFrame([input_dict])
+    input_scaled = best_scaler.transform(input_df[X.columns])
     predicted_value = best_model.predict(input_scaled)[0]
 
     st.success(f"💰 Predicted Assessed Value: ${predicted_value:,.2f}")
