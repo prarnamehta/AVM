@@ -147,11 +147,10 @@ if uploaded_file:
 
     # Prepare input for prediction
     input_data = {
-        "Year Built": year_built,
+        "Neighbourhood Area_freq": ds['Neighbourhood Area'].value_counts().get(selected_neighbourhood, 0),
         "Total Living Area": total_living_area,
-        "Rooms": rooms,
-        "Bathrooms": bathrooms,
-        "Neighbourhood Area_freq": ds['Neighbourhood Area'].value_counts().get(selected_neighbourhood, 0)
+        "Year Built": year_built,
+        "Rooms": rooms
     }
 
     # Add missing columns with zero
