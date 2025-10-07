@@ -9,8 +9,8 @@ import numpy as np
 import joblib
 
 # Load model and scaler
-model = joblib.load("rf_model.pkl")
-scaler = joblib.load("minmax_scaler.pkl")
+model = joblib.load("best_model.pkl")
+scaler = joblib.load("best_scaler.pkl")
 
 st.title("🏠 Automated Valuation Model (AVM)")
 
