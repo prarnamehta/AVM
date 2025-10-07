@@ -120,8 +120,6 @@ if uploaded_file:
             model_objects[f"{model_name} ({scale_name})"] = (model, scaler)
 
     performance_df = pd.DataFrame(performance)
-    st.subheader("📊 Model Performance Comparison")
-    st.dataframe(performance_df)
 
     # Select best model based on R² and nRMSE
     best_model_row = performance_df.sort_values(by=["R²", "nRMSE"], ascending=[False, True]).iloc[0]
@@ -143,9 +141,7 @@ if uploaded_file:
     input_dict = {
         "Year Built": year_built,
         "Total Living Area": total_living_area,
-        "Rooms": rooms,
-        "Bathrooms": bathrooms,
-        "Neighbourhood Area_freq": neighbourhood_freq
+        "Rooms": rooms
     }
 
     # Fill missing features with median or zero
@@ -159,5 +155,5 @@ if uploaded_file:
 if st.button("Predict"):
     predicted_value = best_model.predict(input_scaled)[0]
     st.success(f"💰 Predicted Assessed Value: ${predicted_value:,.2f}")
-    st.success(f"💰 Predicted Assessed Value: ${predicted_value:,.2f}")
+
 
